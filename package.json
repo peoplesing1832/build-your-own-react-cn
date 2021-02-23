@@ -1,0 +1,22 @@
+{
+  "name": "build-your-own-react-cn",
+  "version": "1.0.0",
+  "description": "Build your own React 学习笔记",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/peoplesing1832/build-your-own-react.git"
+  },
+  "keywords": [
+    "React"
+  ],
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/peoplesing1832/build-your-own-react/issues"
+  },
+  "homepage": "https://github.com/peoplesing1832/build-your-own-react#readme"
+}
