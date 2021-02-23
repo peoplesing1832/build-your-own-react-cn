@@ -84,7 +84,20 @@ const container = document.getElementById("root")
 ReactDOM.render(element, container)
 ```
 
-我们从编写自己的`createElement`开始。`children`参数使用`rest`运算符, `children`始终就会为数组。
+我们从编写自己的`createElement`开始。
+
+```js
+const element = createElement(
+  "div",
+  { id: "foo" },
+  createElement("a", null, "bar"),
+  createElement("b")
+)
+const container = document.getElementById("root")
+render(element, container)
+```
+
+`createElement`需要做的就是创建一个`type`和`props`的对象。`createElement`函数中, `children`参数使用`rest`运算符, `children`始终就会为数组。
 
 ```js
 function createElement(type, props, ...children) {
@@ -98,7 +111,7 @@ function createElement(type, props, ...children) {
 };
 ```
 
-例如, `createElement("div", null, a, b)`返回：
+例如, `createElement("div", null, a, b)`会返回：
 
 ```js
 {
@@ -106,7 +119,44 @@ function createElement(type, props, ...children) {
   "props": { "children": [a, b] }
 }
 ```
+
+目前`children`数组中会包含原始值，比如字符串和数字。我们需要对它们进行包装。我们创建一个特殊的类型`TEXT_ELEMENT`。
+
+在React源码中，不会包装原始值, 或者在没有子级的情况下创建空的数组。我们这样做的目的是为了简化我们的代码.
+
+```js
+function createTextElement(text) {
+  return {
+    type: "TEXT_ELEMENT",
+    props: {
+      nodeValue: text,
+      children: [],
+    },
+  }
+}
+
+function createElement(type, props, ...children) {
+  return {
+    type,
+    props: {
+      ...props,
+      children: children.map(child =>
+        typeof child === "object"
+          ? child
+          : createTextElement(child)
+      ),
+    },
+  }
+}
+```
+
+我们如何让`Babel`在编译的过程中，使用我们自己创建的`createElement`呢？我们在配置`babel`的`@babel/preset-react`插件时自定义[`pragma`参数](https://babeljs.io/docs/en/babel-preset-react#pragma)
+
 ## 二: render
+
+接下来我们需要编写自己的`ReactDOM.render`。
+
+> 目前我们只关心向DOM中添加内容，稍后处理更新和删除
 
 ## 三: 并发模式
 
