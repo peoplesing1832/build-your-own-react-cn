@@ -151,14 +151,87 @@ function createElement(type, props, ...children) {
 ```
 
 我们如何让`Babel`在编译的过程中，使用我们自己创建的`createElement`呢？我们在配置`babel`的`@babel/preset-react`插件时自定义[`pragma`参数](https://babeljs.io/docs/en/babel-preset-react#pragma)
-
 ## 二: render
 
 接下来我们需要编写自己的`ReactDOM.render`。
 
 > 目前我们只关心向DOM中添加内容，稍后处理更新和删除
 
+我们首先使用元素的类型创建`DOM`节点，然后将新节点添加到容器中
+
+```js
+function render(element, container) {
+  const dom = document.createElement(element.type)
+  container.appendChild(dom)
+}
+```
+
+我们需要递归的为每一个`children`元素做相同的事情
+
+```js
+function render(element, container) {
+  const dom = document.createElement(element.type)
+  element.props.children.forEach(child =>
+    render(child, dom)
+  )
+  container.appendChild(dom)
+}
+```
+
+之前添加了文本元素的节点，所以在创建节点时需要判断元素的类型
+
+```js
+function render(element, container) {
+  const dom =
+    element.type == "TEXT_ELEMENT"
+      ? document.createTextNode("")
+      : document.createElement(element.type)
+
+  element.props.children.forEach(child =>
+    render(child, dom)
+  )
+  container.appendChild(dom)
+}
+```
+
+最后我们需要将元素的props添加到节点的属性上
+
+```js
+function render(element, container) {
+  const dom =
+    element.type == "TEXT_ELEMENT"
+      ? document.createTextNode("")
+      : document.createElement(element.type)
+
+  const isProperty = key => key !== "children"
+  Object.keys(element.props)
+    .filter(isProperty)
+    .forEach(name => {
+      dom[name] = element.props[name]
+    })
+
+  element.props.children.forEach(child =>
+    render(child, dom)
+  )
+  container.appendChild(dom)
+}
+```
+
+目前为止，我们已经有了一个将JSX呈现到DOM的库。👻[在线的例子在这里]()
 ## 三: 并发模式
+
+在这之前，我们需要重构代码。
+
+递归渲染存在问题，一旦开始渲染就无法停止，直到我们渲染完成整个树。如果树很大，会阻塞主线程过长的时间。
+
+> 🤓️: React Fiber架构使用了链表树实现了可中断渲染，如果大家有兴趣可以参考[这篇文章](https://juejin.cn/post/6925665796106485767)
+
+因此我们需要把工作分解成几个小单元，在我们完成每个单元后，有重要的事情要做，我们中断渲染。
+
+我们使用`requestIdleCallback`实现循环
+
+> 🤓️: 在本文中，作者使用了React中同样的变量命名
+
 
 ## 四: Fiber
 
