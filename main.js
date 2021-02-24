@@ -44,6 +44,7 @@ function createDom(fiber) {
 
 let nextUnitOfWork = null
 let wipRoot = null
+let currentRoot = null
 
 function commitWork(fiber) {
   if (!fiber) {
@@ -58,7 +59,12 @@ function commitWork(fiber) {
 
 function commitRoot() {
   commitWork(wipRoot.child)
+  // 保存最近一次输出到页面上的Fiber树
+  currentRoot = wipRoot
   wipRoot = null
+}
+
+function reconcileChildren(wipFiber, elements) {
 }
 
 function performUnitOfWork(fiber) {
@@ -107,6 +113,18 @@ function performUnitOfWork(fiber) {
   }
 }
 
+function render(element, container) {
+  wipRoot = {
+    dom: container,
+    props: {
+      children: [element],
+    },
+    alternate: currentRoot,
+  }
+  nextUnitOfWork = wipRoot
+  requestIdleCallback(workLoop)
+}
+
 /**
  * 工作循环
  */
@@ -123,17 +141,6 @@ function workLoop(deadline) {
     // 添加dom
     commitRoot()
   }
-}
-
-function render(element, container) {
-  wipRoot = {
-    dom: container,
-    props: {
-      children: [element],
-    },
-  }
-  nextUnitOfWork = wipRoot
-  requestIdleCallback(workLoop)
 }
 
 requestIdleCallback(workLoop)
