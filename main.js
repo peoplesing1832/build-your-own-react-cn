@@ -45,36 +45,27 @@ function createDom(fiber) {
 let nextUnitOfWork = null
 let wipRoot = null
 
+function commitWork(fiber) {
+  if (!fiber) {
+    return
+  }
+  const domParent = fiber.parent.dom
+  domParent.appendChild(fiber.dom)
+  // 递归子节点
+  commitWork(fiber.child)
+  commitWork(fiber.sibling)
+}
+
 function commitRoot() {
-  // TODO add nodes to dom
+  commitWork(wipRoot.child)
+  wipRoot = null
 }
 
-/**
- * 工作循环
- */
-function workLoop(deadline) {
-  let shouldYield = false
-  while (nextUnitOfWork && !shouldYield) {
-    nextUnitOfWork = performUnitOfWork(
-      nextUnitOfWork
-    )
-    shouldYield = deadline.timeRemaining() < 1
-  }
-  if (!nextUnitOfWork && wipRoot) {
-    commitRoot()
-  }
-  requestIdleCallback(workLoop)
-}
-
-function performUnitOfWork(nextUnitOfWork) {
+function performUnitOfWork(fiber) {
   if (!fiber.dom) {
     fiber.dom = createDom(fiber)
   }
 ​
-  if (fiber.parent) {
-    fiber.parent.dom.appendChild(fiber.dom)
-  }
-
   const elements = fiber.props.children
 
   let index = 0
@@ -91,7 +82,7 @@ function performUnitOfWork(nextUnitOfWork) {
     }
 
     if (index === 0) {
-      // 父Fiber节点添加child字段
+      // 父Fiber节点添加child字段，child指向了第一个子节点
       fiber.child = newFiber
     } else {
       // 同级的Fiber节点添加sibling字段
@@ -116,6 +107,24 @@ function performUnitOfWork(nextUnitOfWork) {
   }
 }
 
+/**
+ * 工作循环
+ */
+function workLoop(deadline) {
+  let shouldYield = false
+  while (nextUnitOfWork && !shouldYield) {
+    nextUnitOfWork = performUnitOfWork(
+      nextUnitOfWork
+    )
+    shouldYield = deadline.timeRemaining() < 1
+  }
+  // 如果nextUnitOfWork为假, 说明所有的工作都已经做完了, 我们需要进入commit阶段
+  if (!nextUnitOfWork && wipRoot) {
+    // 添加dom
+    commitRoot()
+  }
+}
+
 function render(element, container) {
   wipRoot = {
     dom: container,
@@ -126,3 +135,5 @@ function render(element, container) {
   nextUnitOfWork = wipRoot
   requestIdleCallback(workLoop)
 }
+
+requestIdleCallback(workLoop)
