@@ -259,7 +259,48 @@ function performUnitOfWork(nextUnitOfWork) {
 
 ## 四: Fibers
 
-我们需要一个数据结构Fiber树（链表树）
+我们需要一个数据结构Fiber树（链表树）。每一个元素都有对应的Fiber节点, 每一个Fiber是一个工作单元。
+
+假设我们需要渲染这样的一颗树：
+
+```js
+render(
+  <div>
+    <h1>
+      <p />
+      <a />
+    </h1>
+    <h2 />
+  </div>,
+  container
+)
+```
+
+在`render`中，创建Fiber，并将根节点的Fiber分配给`nextUnitOfWork`变量。余下的工作在`performUnitOfWork`函数进行，需要做三件事：
+
+1. 将元素添加到DOM
+2. 为子节创建Fiber
+3. 返回下一个工作单元
+
+![Fiber树.png](https://i.loli.net/2021/02/24/oSn8euy6PABDvCf.png)
+
+Fiber树是一个链表树，每一个Fiber节点有`child`, `parent`, `sibling`属性
+
+- `child`, 第一个子级的引用
+- `sibling`, 第一个同级的引用
+- `return`， 父级的引用
+
+遍历Fiber树(链表树)时使用了深度优先遍历，说一下遍历的过程：
+
+1. 从根节点root获取第一个子节点
+2. 如果root有子节点，将当前指针设置为第一个子节点，并进入下一次迭代。（深度优先遍历）
+3. 如果root的第一个子节点，没有子节点，则尝试获取它的第一个兄弟节点。
+4. 如果有兄弟节点，将当前指针设置为第一个子节点，然后兄弟节点进入深度优先遍历。
+5. 如果没有兄弟节点，则返回根节点root。尝试获取父节点的兄弟节点。
+5. 如果父节点没有兄弟节点，则返回根节点root。最后结束遍历。
+
+好，接下来我们开始添加代码
+
 
 ## 五: render 和 commit
 
