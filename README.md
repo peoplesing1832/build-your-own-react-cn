@@ -469,16 +469,16 @@ function performUnitOfWork(nextUnitOfWork) {
 }
 ```
 
-
-
 ## 五: render 和 commit
 
-目前存在的问题，在遍历Fiber树的时候，我们目前会在这里向DOM中添加新节点，由于我们使用`requestIdleCallback`, 浏览器可能会中断我们的渲染，用户会看到不完整的UI。这违反了一致性的原则。我们需要删除`performUnitOfWork`函数中更改DOM的代码。
+目前存在的问题，在遍历Fiber树的时候，我们目前会在这里向DOM中添加新节点，由于我们使用`requestIdleCallback`, 浏览器可能会中断我们的渲染，用户会看到不完整的UI。这违反了一致性的原则。
 
 > 🤓️: React的核心原则之一是"一致性", 它总是一次性更新DOM, 不会显示部分结果。
 
 > 🤓️: 在React的源码中, React分为两个阶段执行工作, `render`阶段和`commit`阶段。`render`阶段的工作是可以异步执行的，React根据可用时间处理一个或者多个Fiber节点。当发生一些更重要的事情时，React会停止并保存已完成的工作。等重要的事情处理完成后，React从中断处继续完成工作。但是有时可能会放弃已经完成的工作，从顶层重新开始。此阶段执行的工作是对用户是不可见的，因此可以实现暂停。但是在`commit`阶段始终是同步的它会产生用户可见的变化, 例如DOM的修改. 这就是React需要一次性完成它们的原因。
 
+
+我们需要删除`performUnitOfWork`函数中更改DOM的代码。
 
 ```js
 function performUnitOfWork(nextUnitOfWork) {
@@ -506,17 +506,27 @@ function render(element, container) {
     },
   }
   nextUnitOfWork = wipRoot
-  requestIdleCallback(workLoop)
 }
 ```
 
-完成了所有的工作。我们需要把整个Fiber树更新到DOM上。我们需要在`commitRoot`函数中做到这一点。
+完成了所有的工作。我们需要把整个Fiber树更新到DOM上。我们需要在`commitRoot`函数中完成这个功能。
 
 ```js
-function commitRoot() {
-  // TODO add nodes to dom
+function commitWork(fiber) {
+  if (!fiber) {
+    return
+  }
+  const domParent = fiber.parent.dom
+  domParent.appendChild(fiber.dom)
+  // 递归子节点
+  commitWork(fiber.child)
+  commitWork(fiber.sibling)
 }
 
+function commitRoot() {
+  commitWork(wipRoot.child)
+  wipRoot = null
+}
 
 function workLoop(deadline) {
   let shouldYield = false
@@ -526,14 +536,17 @@ function workLoop(deadline) {
     )
     shouldYield = deadline.timeRemaining() < 1
   }
+  // 如果nextUnitOfWork为假, 说明所有的工作都已经做完了, 我们需要进入commit阶段
   if (!nextUnitOfWork && wipRoot) {
+    // 添加dom
     commitRoot()
   }
-  requestIdleCallback(workLoop)
 }
 ```
 
 ## 六: 协调
+
+目前为止，我们仅仅向DOM中添加了内容，但是更新和删除呢？我们需要将render接收到元素和提交到DOM上的最后的Fiber树进行对比。
 
 ## 七: Function 组件
 
