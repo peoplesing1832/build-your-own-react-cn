@@ -43,6 +43,11 @@ function createDom(fiber) {
 }
 
 let nextUnitOfWork = null
+let wipRoot = null
+
+function commitRoot() {
+  // TODO add nodes to dom
+}
 
 /**
  * 工作循环
@@ -54,6 +59,9 @@ function workLoop(deadline) {
       nextUnitOfWork
     )
     shouldYield = deadline.timeRemaining() < 1
+  }
+  if (!nextUnitOfWork && wipRoot) {
+    commitRoot()
   }
   requestIdleCallback(workLoop)
 }
@@ -109,12 +117,12 @@ function performUnitOfWork(nextUnitOfWork) {
 }
 
 function render(element, container) {
-  nextUnitOfWork = {
+  wipRoot = {
     dom: container,
     props: {
       children: [element],
     },
   }
-
+  nextUnitOfWork = wipRoot
   requestIdleCallback(workLoop)
 }
