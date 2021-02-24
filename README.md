@@ -217,7 +217,7 @@ function render(element, container) {
 }
 ```
 
-目前为止，我们已经有了一个将JSX呈现到DOM的库。👻[在线的例子在这里]()
+目前为止，我们已经有了一个将JSX呈现到DOM的库。
 ## 三: 并发模式
 
 在这之前，我们需要重构代码。
@@ -469,7 +469,69 @@ function performUnitOfWork(nextUnitOfWork) {
 }
 ```
 
+
+
 ## 五: render 和 commit
+
+目前存在的问题，在遍历Fiber树的时候，我们目前会在这里向DOM中添加新节点，由于我们使用`requestIdleCallback`, 浏览器可能会中断我们的渲染，用户会看到不完整的UI。这违反了一致性的原则。我们需要删除`performUnitOfWork`函数中更改DOM的代码。
+
+> 🤓️: React的核心原则之一是"一致性", 它总是一次性更新DOM, 不会显示部分结果。
+
+> 🤓️: 在React的源码中, React分为两个阶段执行工作, `render`阶段和`commit`阶段。`render`阶段的工作是可以异步执行的，React根据可用时间处理一个或者多个Fiber节点。当发生一些更重要的事情时，React会停止并保存已完成的工作。等重要的事情处理完成后，React从中断处继续完成工作。但是有时可能会放弃已经完成的工作，从顶层重新开始。此阶段执行的工作是对用户是不可见的，因此可以实现暂停。但是在`commit`阶段始终是同步的它会产生用户可见的变化, 例如DOM的修改. 这就是React需要一次性完成它们的原因。
+
+
+```js
+function performUnitOfWork(nextUnitOfWork) {
+  if (!fiber.dom) {
+    fiber.dom = createDom(fiber)
+  }
+
+  const elements = fiber.props.children
+
+  // ...
+```
+
+我们需要保留Fiber树根的引用, 我们称其为`wipRoot`
+
+> 🤓️: 在React中Fiber树的根被称为`HostRoot`。我们可以在通过容器的DOM节点获取, `容器DOM._reactRootContainer._internalRoot.current`。
+
+```js
+let wipRoot = null
+
+function render(element, container) {
+  wipRoot = {
+    dom: container,
+    props: {
+      children: [element],
+    },
+  }
+  nextUnitOfWork = wipRoot
+  requestIdleCallback(workLoop)
+}
+```
+
+完成了所有的工作。我们需要把整个Fiber树更新到DOM上。我们需要在`commitRoot`函数中做到这一点。
+
+```js
+function commitRoot() {
+  // TODO add nodes to dom
+}
+
+
+function workLoop(deadline) {
+  let shouldYield = false
+  while (nextUnitOfWork && !shouldYield) {
+    nextUnitOfWork = performUnitOfWork(
+      nextUnitOfWork
+    )
+    shouldYield = deadline.timeRemaining() < 1
+  }
+  if (!nextUnitOfWork && wipRoot) {
+    commitRoot()
+  }
+  requestIdleCallback(workLoop)
+}
+```
 
 ## 六: 协调
 
