@@ -544,9 +544,59 @@ function workLoop(deadline) {
 }
 ```
 
+> 🤓️: 在React的源码中`commit`阶段从`completeRoot`函数开始，在开始任何工作前，它将`FiberRoot`的`finishedWork`属性设置为null。
+
 ## 六: 协调
 
-目前为止，我们仅仅向DOM中添加了内容，但是更新和删除呢？我们需要将render接收到元素和提交到DOM上的最后的Fiber树进行对比。
+目前为止，我们仅仅向DOM中添加了内容，但是更新和删除呢？我们需要将render函数接收到元素和提交到DOM上的最后的Fiber树进行对比。
+
+因此在`commit`我们需要保存最后的Fiber树的引用，我们称之为`currentRoot`。我们还将`alternate`字段添加到每一个Fiber节点上，`alternate`字段上保存了`currentRoot`的引用。
+
+> 🤓️: 在React源码中，在第一次渲染完成后，React会生成一个Fiber树。该树映射了应用程序的状态，这颗树被称为current tree。当应用程序开始更新时，React会构建一个workInProgress tree, workInProgress tree映射了未来的状态。
+
+> 🤓️: 所有的工作都是在`workInProgress tree上`的Fiber节点上进行的。当React开始遍历Fiber时，它会为每一个现有的Fiber节点创建一个备份, 在`alternate`字段，备份构成了`workInProgress tree`。
+
+```js
+let nextUnitOfWork = null
+let wipRoot = null
+let currentRoot = null
+
+function commitWork(fiber) {
+  if (!fiber) {
+    return
+  }
+  const domParent = fiber.parent.dom
+  domParent.appendChild(fiber.dom)
+  // 递归子节点
+  commitWork(fiber.child)
+  commitWork(fiber.sibling)
+}
+
+function commitRoot() {
+  commitWork(wipRoot.child)
+  // 保存最近一次输出到页面上的Fiber树
+  currentRoot = wipRoot
+  wipRoot = null
+}
+
+function render(element, container) {
+  wipRoot = {
+    dom: container,
+    props: {
+      children: [element],
+    },
+    alternate: currentRoot,
+  }
+  nextUnitOfWork = wipRoot
+  requestIdleCallback(workLoop)
+}
+```
+
+接下来我们需要从`performUnitOfWork`函数中将创建Fiber的代码提取出来，一个新的`reconcileChildren`函数。
+
+```js
+```
+
 
 ## 七: Function 组件
 
