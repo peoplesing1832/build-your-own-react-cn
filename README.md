@@ -253,7 +253,7 @@ function performUnitOfWork(nextUnitOfWork) {
 }
 ```
 
-> 🤓️: nextUnitOfWork变量保持了Fiber中需要工作节点引用或者为null, 表示没有工作。
+> 🤓️: nextUnitOfWork变量保持了Fiber中需要工作节点引用或者为null, 如果是null表示没有工作。
 
 要开始我们的`workLoop`, 我们需要第一个工作单元（Fiber节点），然后编写`performUnitOfWork`函数，`performUnitOfWork`函数执行工作，并返回下一个需要工作的节点。
 
@@ -288,7 +288,9 @@ Fiber树是一个链表树，每一个Fiber节点有`child`, `parent`, `sibling`
 
 - `child`, 第一个子级的引用
 - `sibling`, 第一个同级的引用
-- `return`， 父级的引用
+- `parent`， 父级的引用
+
+> 🤓️: 在React的Fiber节点中，使用`return`字段保留了对父Fiber节点的引用
 
 遍历Fiber树(链表树)时使用了深度优先遍历，说一下遍历的过程：
 
@@ -299,8 +301,173 @@ Fiber树是一个链表树，每一个Fiber节点有`child`, `parent`, `sibling`
 5. 如果没有兄弟节点，则返回根节点root。尝试获取父节点的兄弟节点。
 5. 如果父节点没有兄弟节点，则返回根节点root。最后结束遍历。
 
-好，接下来我们开始添加代码
+好，接下来我们开始添加代码, 将创建的DOM的代码单独抽离出, 稍后使用它
 
+```js
+function createDom(fiber) {
+  const dom = fiber.type == "TEXT_ELEMENT"
+    ? document.createTextNode("")
+    : document.createElement(element.type)
+
+  const isProperty = key => key !== "children"
+
+  Object.keys(element.props)
+    .filter(isProperty)
+    .forEach(name => {
+      dom[name] = element.props[name]
+    })
+  return dom
+}
+```
+
+在`render`函数中，将`nextUnitOfWork`变量设置为Fiber节点树的根
+
+```js
+function render(element, container) {
+  nextUnitOfWork = {
+    dom: container,
+    props: {
+      children: [element],
+    },
+  }
+}
+```
+
+当浏览器准备就绪，调用workLoop，开始处理根节点
+
+```js
+let nextUnitOfWork = null
+​
+function workLoop(deadline) {
+  let shouldYield = false
+  while (nextUnitOfWork && !shouldYield) {
+    nextUnitOfWork = performUnitOfWork(
+      nextUnitOfWork
+    )
+    shouldYield = deadline.timeRemaining() < 1
+  }
+  requestIdleCallback(workLoop)
+}
+​
+requestIdleCallback(workLoop)
+​
+function performUnitOfWork(fiber) {
+  // 添加DOM节点
+  // 创建Fiber
+  // 获取下一个处理工作的Fiber节点
+}
+```
+
+首先创建DOM, 并添加到Fiber节点的`dom`字段中，我们在`dom`字段中保留对`dom`的引用
+
+```js
+function performUnitOfWork(fiber) {
+  if (!fiber.dom) {
+    fiber.dom = createDom(fiber)
+  }
+​
+  if (fiber.parent) {
+    fiber.parent.dom.appendChild(fiber.dom)
+  }
+}
+```
+
+> 🤓️: 在React的Fiber节点中，`stateNode`字段，保留对class组件实例的引用, DOM节点或其他与Fiber节点相关联的React元素类实例的引用。
+
+接下来为每一个子元素创建Fiber节点。同时因为Fiber树是一个链表树，所以我们需要为Fiber节点添加`child`, `parent`, `sibling`字段
+
+```js
+function performUnitOfWork(nextUnitOfWork) {
+  if (!fiber.dom) {
+    fiber.dom = createDom(fiber)
+  }
+​
+  if (fiber.parent) {
+    fiber.parent.dom.appendChild(fiber.dom)
+  }
+
+  const elements = fiber.props.children
+
+  let index = 0
+  let prevSibling = null
+
+  while (index < elements.length) {
+    const element = elements[index]
+​
+    const newFiber = {
+      type: element.type,
+      props: element.props,
+      parent: fiber, // 父Fiber节点的引用
+      dom: null,
+    }
+
+    if (index === 0) {
+      // 父Fiber节点添加child字段
+      fiber.child = newFiber
+    } else {
+      // 同级的Fiber节点添加sibling字段
+      prevSibling.sibling = newFiber
+    }
+​
+    prevSibling = newFiber
+    index++
+  }
+}
+```
+
+在完成的当前节点的工作后，我们需要返回下一个节点。因为是深度优先遍历，首先尝试遍历`child`，然后是`sibling`, 最后回溯到`parent`, 尝试遍历`parent`的`sibling`
+
+```js
+function performUnitOfWork(nextUnitOfWork) {
+  if (!fiber.dom) {
+    fiber.dom = createDom(fiber)
+  }
+​
+  if (fiber.parent) {
+    fiber.parent.dom.appendChild(fiber.dom)
+  }
+
+  const elements = fiber.props.children
+
+  let index = 0
+  let prevSibling = null
+
+  while (index < elements.length) {
+    const element = elements[index]
+​
+    const newFiber = {
+      type: element.type,
+      props: element.props,
+      parent: fiber, // 父节点的引用
+      dom: null,
+    }
+
+    if (index === 0) {
+      // 父Fiber节点添加child字段
+      fiber.child = newFiber
+    } else {
+      // 同级的Fiber节点添加sibling字段
+      prevSibling.sibling = newFiber
+    }
+​
+    prevSibling = newFiber
+    index++
+  }
+
+  // 首先尝试子节点
+  if (fiber.child) {
+    return fiber.child
+  }
+  let nextFiber = fiber
+  while (nextFiber) {
+    // 尝试同级节点
+    if (nextFiber.sibling) {
+      return nextFiber.sibling
+    }
+    nextFiber = nextFiber.parent
+  }
+}
+```
 
 ## 五: render 和 commit
 
