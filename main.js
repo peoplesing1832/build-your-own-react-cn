@@ -18,6 +18,9 @@ function createElement(type, props, ...children) {
   }
 }
 
+function createDom(fiber) {
+}
+
 function render(element, container) {
   const dom =
     element.type == "TEXT_ELEMENT"
