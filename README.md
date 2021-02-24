@@ -228,12 +228,38 @@ function render(element, container) {
 
 因此我们需要把工作分解成几个小单元，在我们完成每个单元后，有重要的事情要做，我们中断渲染。
 
-我们使用`requestIdleCallback`实现循环
+我们使用`requestIdleCallback`实现循环, 浏览器会在空闲时，执行`requestIdleCallback`的回调。**React的内部并不使用`requestIdleCallback`, React内部使用[scheduler package](https://github.com/facebook/react/tree/master/packages/scheduler)**, 通过`requestIdleCallback`我们还可以获得我们还有多少可用时间用于渲染。
 
-> 🤓️: 在本文中，作者使用了React中同样的变量命名
+> 🤓️: 关于requestIdleCallback的更多细节可以查看这篇文章，[详解 requestIdleCallback](https://juejin.cn/post/6844904081463443463)
 
+```js
+let nextUnitOfWork = null
+​
+function workLoop(deadline) {
+  let shouldYield = false
+  while (nextUnitOfWork && !shouldYield) {
+    nextUnitOfWork = performUnitOfWork(
+      nextUnitOfWork
+    )
+    shouldYield = deadline.timeRemaining() < 1
+  }
+  requestIdleCallback(workLoop)
+}
+​
+requestIdleCallback(workLoop)
+​
+function performUnitOfWork(nextUnitOfWork) {
+  // TODO
+}
+```
 
-## 四: Fiber
+> 🤓️: nextUnitOfWork变量保持了Fiber中需要工作节点引用或者为null, 表示没有工作。
+
+要开始我们的`workLoop`, 我们需要第一个工作单元（Fiber节点），然后编写`performUnitOfWork`函数，`performUnitOfWork`函数执行工作，并返回下一个需要工作的节点。
+
+## 四: Fibers
+
+我们需要一个数据结构Fiber树（链表树）
 
 ## 五: render 和 commit
 
