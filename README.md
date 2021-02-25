@@ -552,7 +552,7 @@ function workLoop(deadline) {
 
 因此在`commit`我们需要保存最后的Fiber树的引用，我们称之为`currentRoot`。我们还将`alternate`字段添加到每一个Fiber节点上，`alternate`字段上保存了`currentRoot`的引用。
 
-> 🤓️: 在React源码中，在第一次渲染完成后，React会生成一个Fiber树。该树映射了应用程序的状态，这颗树被称为current tree。当应用程序开始更新时，React会构建一个workInProgress tree, workInProgress tree映射了未来的状态。
+> 🤓️: 在React源码中，在第一次渲染完成后，React会生成一个Fiber树。该树映射了应用程序的状态，这颗树被称为current tree。当应用程序开始更新时，React会构建一个`workInProgress tree`, `workInProgress tree`映射了未来的状态。
 
 > 🤓️: 所有的工作都是在`workInProgress tree上`的Fiber节点上进行的。当React开始遍历Fiber时，它会为每一个现有的Fiber节点创建一个备份, 在`alternate`字段，备份构成了`workInProgress tree`。
 
@@ -592,12 +592,90 @@ function render(element, container) {
 }
 ```
 
-接下来我们需要从`performUnitOfWork`函数中将创建Fiber的代码提取出来，一个新的`reconcileChildren`函数。
+接下来我们需要从`performUnitOfWork`函数中将创建Fiber的代码提取出来，一个新的`reconcileChildren`函数。在这里我们将对`currentRoot`(当前页面对应的Fiber树)与新元素进行协调。
 
 ```js
+function reconcileChildren(wipFiber, elements) {
+  let index = 0
+  let prevSibling = null
+
+  while (index < elements.length) {
+    const element = elements[index]
+​
+    const newFiber = {
+      type: element.type,
+      props: element.props,
+      parent: fiber, // 父节点的引用
+      dom: null,
+    }
+
+    if (index === 0) {
+      // 父Fiber节点添加child字段，child指向了第一个子节点
+      fiber.child = newFiber
+    } else {
+      // 同级的Fiber节点添加sibling字段
+      prevSibling.sibling = newFiber
+    }
+​
+    prevSibling = newFiber
+    index++
+  }
+}
+
+function performUnitOfWork(fiber) {
+  if (!fiber.dom) {
+    fiber.dom = createDom(fiber)
+  }
+​
+  const elements = fiber.props.children
+  reconcileChildren(wipFiber, elements)
+
+  // 首先尝试子节点
+  if (fiber.child) {
+    return fiber.child
+  }
+  let nextFiber = fiber
+  while (nextFiber) {
+    // 尝试同级节点
+    if (nextFiber.sibling) {
+      return nextFiber.sibling
+    }
+    nextFiber = nextFiber.parent
+  }
+}
 ```
 
+我们同时遍历旧的Fiber树，既`wipFiber.alternate`，和需要协调的新的元素。如果我们忽略遍历链表和数组的模版代码。那么在`while`循环中，最重要的就是`oldFiber`和`element`。`element`是我们需要渲染的DOM, `oldFiber`是上次渲染的Fiber。
 
+```js
+function reconcileChildren(wipFiber, elements) {
+  let index = 0
+  let oldFiber = wipFiber.alternate && wipFiber.alternate.child
+  let prevSibling = null
+
+  while (
+    index < elements.length ||
+    oldFiber !== null
+  ) {
+    const element = elements[index]
+​
+    const newFiber = null
+
+    // TODO compare oldFiber to element
+
+    if (index === 0) {
+      // 父Fiber节点添加child字段，child指向了第一个子节点
+      fiber.child = newFiber
+    } else {
+      // 同级的Fiber节点添加sibling字段
+      prevSibling.sibling = newFiber
+    }
+​
+    prevSibling = newFiber
+    index++
+  }
+}
+```
 ## 七: Function 组件
 
 ## 八: hooks

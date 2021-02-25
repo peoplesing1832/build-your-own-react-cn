@@ -65,27 +65,19 @@ function commitRoot() {
 }
 
 function reconcileChildren(wipFiber, elements) {
-}
-
-function performUnitOfWork(fiber) {
-  if (!fiber.dom) {
-    fiber.dom = createDom(fiber)
-  }
-​
-  const elements = fiber.props.children
-
   let index = 0
+  let oldFiber = wipFiber.alternate && wipFiber.alternate.child
   let prevSibling = null
 
-  while (index < elements.length) {
+  while (
+    index < elements.length ||
+    oldFiber !== null
+  ) {
     const element = elements[index]
 ​
-    const newFiber = {
-      type: element.type,
-      props: element.props,
-      parent: fiber, // 父节点的引用
-      dom: null,
-    }
+    const newFiber = null
+
+    // TODO compare oldFiber to element
 
     if (index === 0) {
       // 父Fiber节点添加child字段，child指向了第一个子节点
@@ -98,6 +90,15 @@ function performUnitOfWork(fiber) {
     prevSibling = newFiber
     index++
   }
+}
+
+function performUnitOfWork(fiber) {
+  if (!fiber.dom) {
+    fiber.dom = createDom(fiber)
+  }
+​
+  const elements = fiber.props.children
+  reconcileChildren(wipFiber, elements)
 
   // 首先尝试子节点
   if (fiber.child) {
