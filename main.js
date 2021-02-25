@@ -74,10 +74,40 @@ function reconcileChildren(wipFiber, elements) {
     oldFiber !== null
   ) {
     const element = elements[index]
-​
-    const newFiber = null
+    let newFiber = null
 
-    // TODO compare oldFiber to element
+    // 判断是否是同类型
+    const sameType =
+      oldFiber &&
+      element &&
+      element.type == oldFiber.type
+
+    if (sameType) {
+      newFiber = {
+        type: oldFiber.type,
+        props: element.props,
+        dom: oldFiber.dom,
+        parent: wipFiber,
+        alternate: oldFiber,
+        effectTag: "UPDATE",
+      }
+    }
+
+    if (!sameType && element) {
+      // 新增节点
+      newFiber = {
+        type: element.type,
+        props: element.props,
+        dom: null,
+        parent: wipFiber,
+        alternate: null,
+        effectTag: "PLACEMENT",
+      }
+    }
+
+    if (!sameType && oldFiber) {
+      // 删除节点
+    }
 
     if (index === 0) {
       // 父Fiber节点添加child字段，child指向了第一个子节点
