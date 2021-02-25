@@ -645,7 +645,7 @@ function performUnitOfWork(fiber) {
 }
 ```
 
-我们同时遍历旧的Fiber树，既`wipFiber.alternate`，和需要协调的新的元素。如果我们忽略遍历链表和数组的模版代码。那么在`while`循环中，最重要的就是`oldFiber`和`element`。`element`是我们需要渲染的DOM, `oldFiber`是上次渲染的Fiber。
+我们同时遍历旧的Fiber树，既`wipFiber.alternate`，和需要协调的新的元素。如果我们忽略遍历链表和数组的模版代码。那么在`while`循环中，最重要的就是`oldFiber`和`element`。`element`是我们需要渲染的DOM, `oldFiber`是上次渲染的Fiber。我们需要比较它们，以确定DOM是否需要任何的更改。
 
 ```js
 function reconcileChildren(wipFiber, elements) {
@@ -658,10 +658,11 @@ function reconcileChildren(wipFiber, elements) {
     oldFiber !== null
   ) {
     const element = elements[index]
-​
-    const newFiber = null
+​    let newFiber = null
 
     // TODO compare oldFiber to element
+
+    // ....
 
     if (index === 0) {
       // 父Fiber节点添加child字段，child指向了第一个子节点
@@ -676,6 +677,153 @@ function reconcileChildren(wipFiber, elements) {
   }
 }
 ```
+
+为了比较它们我们使用以下的规则：
+
+1. 如果`oldFiber`和`element`具有相同的类型，我们保留DOM节点，并使用新的props更新
+2. 如果类型不同，并且有新元素。我们需要创建一个新的DOM节点。
+3. 如果类型不同，存在之前的Fiber，我们需要移除旧节点
+
+```js
+function reconcileChildren(wipFiber, elements) {
+  let index = 0
+  let oldFiber = wipFiber.alternate && wipFiber.alternate.child
+  let prevSibling = null
+
+  while (
+    index < elements.length ||
+    oldFiber !== null
+  ) {
+    const element = elements[index]
+    let newFiber = null
+
+    // 判断是否是同类型
+    const sameType =
+      oldFiber &&
+      element &&
+      element.type == oldFiber.type
+
+    if (sameType) {
+      // 更新节点
+    }
+
+    if (!sameType && element) {
+      // 新增节点
+    }
+
+    if (!sameType && oldFiber) {
+      // 删除节点
+    }
+
+    if (index === 0) {
+      // 父Fiber节点添加child字段，child指向了第一个子节点
+      fiber.child = newFiber
+    } else {
+      // 同级的Fiber节点添加sibling字段
+      prevSibling.sibling = newFiber
+    }
+​
+    prevSibling = newFiber
+    index++
+  }
+}
+```
+
+在React中，React使用了`key`, 可以更好的进行协调，使用`key`可以检测元素在列表中位置是否改变，更好的复用节点。
+
+当之前的Fiber和新元素具有相同的类型时，我们创建一个新的Fiber节点，保留旧Fiber的DOM节点和元素的props。
+
+并且为Fiber添加了一个新的属性`effectTag`, 稍后在`commit`阶段使用
+
+> 🤓️: 在React源码中`effectTag`, `effectTag`编码的是与Fiber节点相关的`effects`(副作用)。React中`effectTag`使用了数字的形式存储，使用了按位或构造了一个属性集。更多内容请[查看](https://juejin.cn/post/6931187032857575438)
+
+```js
+function reconcileChildren(wipFiber, elements) {
+  let index = 0
+  let oldFiber = wipFiber.alternate && wipFiber.alternate.child
+  let prevSibling = null
+
+  while (
+    index < elements.length ||
+    oldFiber !== null
+  ) {
+    const element = elements[index]
+    let newFiber = null
+
+    // 判断是否是同类型
+    const sameType =
+      oldFiber &&
+      element &&
+      element.type == oldFiber.type
+
+    if (sameType) {
+      newFiber = {
+        type: oldFiber.type,
+        props: element.props,
+        dom: oldFiber.dom,
+        parent: wipFiber,
+        alternate: oldFiber,
+        effectTag: "UPDATE",
+      }
+    }
+
+    if (!sameType && element) {
+      // 新增节点
+    }
+
+    if (!sameType && oldFiber) {
+      // 删除节点
+    }
+
+    // ...
+  }
+}
+```
+
+对于新增的节点，我们在`effectTag`属性上，使用`PLACEMENT`标志进行标记。
+
+```js
+function reconcileChildren(wipFiber, elements) {
+  let index = 0
+  let oldFiber = wipFiber.alternate && wipFiber.alternate.child
+  let prevSibling = null
+
+  while (
+    index < elements.length ||
+    oldFiber !== null
+  ) {
+    const element = elements[index]
+    let newFiber = null
+
+    // 判断是否是同类型
+    const sameType =
+      oldFiber &&
+      element &&
+      element.type == oldFiber.type
+
+    // ...
+
+    if (!sameType && element) {
+      // 新增节点
+      newFiber = {
+        type: element.type,
+        props: element.props,
+        dom: null,
+        parent: wipFiber,
+        alternate: null,
+        effectTag: "PLACEMENT",
+      }
+    }
+
+    if (!sameType && oldFiber) {
+      // 删除节点
+    }
+
+    // ...
+  }
+}
+```
+
 ## 七: Function 组件
 
 ## 八: hooks
