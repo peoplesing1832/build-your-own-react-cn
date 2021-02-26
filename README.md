@@ -554,7 +554,7 @@ function workLoop(deadline) {
 
 > 🤓️: 在React源码中，在第一次渲染完成后，React会生成一个Fiber树。该树映射了应用程序的状态，这颗树被称为current tree。当应用程序开始更新时，React会构建一个`workInProgress tree`, `workInProgress tree`映射了未来的状态。
 
-> 🤓️: 所有的工作都是在`workInProgress tree上`的Fiber节点上进行的。当React开始遍历Fiber时，它会为每一个现有的Fiber节点创建一个备份, 在`alternate`字段，备份构成了`workInProgress tree`。
+> 🤓️: 所有的工作都是在`workInProgress tree`上的Fiber上进行的。当React开始遍历Fiber时，它会为每一个现有的Fiber节点创建一个备份, 在`alternate`字段中，备份构成了`workInProgress tree`。
 
 ```js
 let nextUnitOfWork = null
@@ -588,7 +588,6 @@ function render(element, container) {
     alternate: currentRoot,
   }
   nextUnitOfWork = wipRoot
-  requestIdleCallback(workLoop)
 }
 ```
 
@@ -611,7 +610,7 @@ function reconcileChildren(wipFiber, elements) {
 
     if (index === 0) {
       // 父Fiber节点添加child字段，child指向了第一个子节点
-      fiber.child = newFiber
+      wipFiber.child = newFiber
     } else {
       // 同级的Fiber节点添加sibling字段
       prevSibling.sibling = newFiber
@@ -664,9 +663,13 @@ function reconcileChildren(wipFiber, elements) {
 
     // ....
 
+    if (oldFiber) {
+      oldFiber = oldFiber.sibling
+    }
+
     if (index === 0) {
       // 父Fiber节点添加child字段，child指向了第一个子节点
-      fiber.child = newFiber
+      wipFiber.child = newFiber
     } else {
       // 同级的Fiber节点添加sibling字段
       prevSibling.sibling = newFiber
@@ -715,9 +718,13 @@ function reconcileChildren(wipFiber, elements) {
       // 删除节点
     }
 
+    if (oldFiber) {
+      oldFiber = oldFiber.sibling
+    }
+
     if (index === 0) {
       // 父Fiber节点添加child字段，child指向了第一个子节点
-      fiber.child = newFiber
+      wipFiber.child = newFiber
     } else {
       // 同级的Fiber节点添加sibling字段
       prevSibling.sibling = newFiber
@@ -824,6 +831,43 @@ function reconcileChildren(wipFiber, elements) {
 }
 ```
 
+对于需要删除节点，我们不创建新的Fiber，而是将`effectTag`设置为`DELETION`, 并添加到旧的Fiber节点上。
+
+```js
+function reconcileChildren(wipFiber, elements) {
+  let index = 0
+  let oldFiber = wipFiber.alternate && wipFiber.alternate.child
+  let prevSibling = null
+
+  while (
+    index < elements.length ||
+    oldFiber !== null
+  ) {
+    const element = elements[index]
+    let newFiber = null
+
+    // 判断是否是同类型
+    const sameType =
+      oldFiber &&
+      element &&
+      element.type == oldFiber.type
+
+    // ...
+
+    if (!sameType && oldFiber) {
+      // 删除节点
+      oldFiber.effectTag = "DELETION"
+      deletions.push(oldFiber)
+    }
+
+    // ...
+  }
+}
+```
+
+当我们在`commit`时, 我们从
+
+> 🤓️:
 ## 七: Function 组件
 
 ## 八: hooks

@@ -64,8 +64,12 @@ function commitRoot() {
   wipRoot = null
 }
 
+/**
+ * 子协调
+ */
 function reconcileChildren(wipFiber, elements) {
   let index = 0
+  // 从第一个子节点开始
   let oldFiber = wipFiber.alternate && wipFiber.alternate.child
   let prevSibling = null
 
@@ -107,12 +111,19 @@ function reconcileChildren(wipFiber, elements) {
 
     if (!sameType && oldFiber) {
       // 删除节点
+      oldFiber.effectTag = "DELETION"
+      deletions.push(oldFiber)
+    }
+
+    // 下一个旧节点
+    if (oldFiber) {
+      oldFiber = oldFiber.sibling
     }
 
     if (index === 0) {
       // 父Fiber节点添加child字段，child指向了第一个子节点
-      fiber.child = newFiber
-    } else {
+      wipFiber.child = newFiber
+    } else if (element) {
       // 同级的Fiber节点添加sibling字段
       prevSibling.sibling = newFiber
     }
@@ -128,32 +139,20 @@ function performUnitOfWork(fiber) {
   }
 ​
   const elements = fiber.props.children
+  // 子协调
   reconcileChildren(wipFiber, elements)
 
-  // 首先尝试子节点
+  // 接下来返回下一个需要处理的Fiber节点
   if (fiber.child) {
     return fiber.child
   }
   let nextFiber = fiber
   while (nextFiber) {
-    // 尝试同级节点
     if (nextFiber.sibling) {
       return nextFiber.sibling
     }
     nextFiber = nextFiber.parent
   }
-}
-
-function render(element, container) {
-  wipRoot = {
-    dom: container,
-    props: {
-      children: [element],
-    },
-    alternate: currentRoot,
-  }
-  nextUnitOfWork = wipRoot
-  requestIdleCallback(workLoop)
 }
 
 /**
@@ -172,6 +171,20 @@ function workLoop(deadline) {
     // 添加dom
     commitRoot()
   }
+
+  requestIdleCallback(workLoop)
 }
 
 requestIdleCallback(workLoop)
+
+
+function render(element, container) {
+  wipRoot = {
+    dom: container,
+    props: {
+      children: [element],
+    },
+    alternate: currentRoot,
+  }
+  nextUnitOfWork = wipRoot
+}
