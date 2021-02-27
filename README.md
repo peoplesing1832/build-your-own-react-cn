@@ -865,7 +865,7 @@ function reconcileChildren(wipFiber, elements) {
 }
 ```
 
-当我们在`commit`时, 我们从新创建的Fiber节点树开始遍历，里面没有需要保存删除的旧节点。所以我们需要额外使用一个数组`deletions`保存需要删除的节点
+当我们在`commit`时, 我们从新构建的Fiber节点树开始遍历，由于没有需要保存删除的旧节点。所以我们需要额外使用一个数组`deletions`保存需要删除的旧节点
 
 > 🤓️: 在React的源码，`workInProgress tree`的Fiber节点拥有`current tree`对应节点的引用。反之亦然。
 
@@ -984,6 +984,47 @@ function updateDom(dom, prevProps, nextProps) {
   // TODO
 }
 ```
+
+我们使用旧的Fiber的props和新的Fiber的props进行比较，移除删除的的props，添加或更新已更改的props
+
+```js
+// 用于排除children属性
+const isProperty = key => key !== "children"
+// 用于判断是否更新了属性
+const isNew = (prev, next) => key => prev[key] !== next[key]
+// 用于判断在新的props上是否有属性
+const isGone = (prev, next) => key => !(key in next)
+
+function updateDom(dom, prevProps, nextProps) {
+  // 删除之前的属性
+  Object.keys(prevProps)
+    .filter(isProperty)
+    .filter(isGone(prevProps, nextProps))
+    .forEach(name => {
+      dom[name] = ""
+    })
+  // 添加或者更新属性
+  Object.keys(nextProps)
+    .filter(isProperty)
+    .filter(isNew(prevProps, nextProps))
+    .forEach(name => {
+      dom[name] = nextProps[name]
+    })
+}
+```
+
+我们需要对事件监听器做特殊的处理，如果props以`on`开头, 我们使用不同的方式去处理它们
+
+```js
+// 判断props是否是on开头
+const isEvent = key => key.startsWith("on")
+// 用于排除children属性，和on开头的属性
+const isProperty = key => key !== "children" && !isEvent(key)
+```
+
+如果事件处理程序发生了更改，我们需要首先删除，然后添加新的处理程序
+
+> 🤓️: 直接在DOM上添加事件处理程序的方式，有点类似`preact`中的处理方式
 ## 七: Function 组件
 
 ## 八: hooks

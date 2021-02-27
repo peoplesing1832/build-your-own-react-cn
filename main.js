@@ -24,6 +24,51 @@ function createElement(type, props, ...children) {
   }
 }
 
+// 判断props是否是on开头
+const isEvent = key => key.startsWith("on")
+// 用于排除children属性，和on开头的属性
+const isProperty = key => key !== "children" && !isEvent(key)
+// 用于判断是否更新了属性
+const isNew = (prev, next) => key => prev[key] !== next[key]
+// 用于判断在新的props上是否有属性
+const isGone = (prev, next) => key => !(key in next)
+
+function updateDom(dom, prevProps, nextProps) {
+  Object.keys(prevProps)
+    .filter(isEvent)
+    .filter(
+      key =>
+        // 如果事件处理程序发生了更新，获取新的props上没有
+        // 需要先删除之前的处理程序
+        !(key in nextProps) ||
+        isNew(prevProps, nextProps)(key)
+    )
+    .forEach(name => {
+      const eventType = name
+        .toLowerCase()
+        .substring(2)
+      dom.removeEventListener(
+        eventType,
+        prevProps[name]
+      )
+    })
+
+  // 删除之前的属性
+  Object.keys(prevProps)
+    .filter(isProperty)
+    .filter(isGone(prevProps, nextProps))
+    .forEach(name => {
+      dom[name] = ""
+    })
+  // 添加或者更新属性
+  Object.keys(nextProps)
+    .filter(isProperty)
+    .filter(isNew(prevProps, nextProps))
+    .forEach(name => {
+      dom[name] = nextProps[name]
+    })
+}
+
 /**
  * 创建DOM
  */
@@ -46,6 +91,7 @@ let nextUnitOfWork = null
 let wipRoot = null
 let currentRoot = null
 let deletions = null
+
 
 function commitWork(fiber) {
   if (!fiber) {
