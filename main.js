@@ -52,7 +52,6 @@ function updateDom(dom, prevProps, nextProps) {
         prevProps[name]
       )
     })
-
   // 删除之前的属性
   Object.keys(prevProps)
     .filter(isProperty)
@@ -66,6 +65,19 @@ function updateDom(dom, prevProps, nextProps) {
     .filter(isNew(prevProps, nextProps))
     .forEach(name => {
       dom[name] = nextProps[name]
+    })
+  // 添加事件监听
+  Object.keys(nextProps)
+    .filter(isEvent)
+    .filter(isNew(prevProps, nextProps))
+    .forEach(name => {
+      const eventType = name
+        .toLowerCase()
+        .substring(2)
+      dom.addEventListener(
+        eventType,
+        nextProps[name]
+      )
     })
 }
 
