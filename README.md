@@ -865,9 +865,125 @@ function reconcileChildren(wipFiber, elements) {
 }
 ```
 
-当我们在`commit`时, 我们从
+当我们在`commit`时, 我们从新创建的Fiber节点树开始遍历，里面没有需要保存删除的旧节点。所以我们需要额外使用一个数组`deletions`保存需要删除的节点
 
-> 🤓️:
+> 🤓️: 在React的源码，`workInProgress tree`的Fiber节点拥有`current tree`对应节点的引用。反之亦然。
+
+```js
+let deletions = null
+
+function render(element, container) {
+  wipRoot = {
+    dom: container,
+    props: {
+      children: [element],
+    },
+    alternate: currentRoot,
+  }
+  deletions = []
+  nextUnitOfWork = wipRoot
+}
+```
+
+当我们进入`commit`阶段时，使用该数组中的Fiber
+
+```js
+function commitRoot() {
+  deletions.forEach(commitWork)
+  commitWork(wipRoot.child)
+  currentRoot = wipRoot
+  wipRoot = null
+}
+```
+
+现在让我修改`commitWork`函数以处理新的`effectTag`字段
+
+如果`effectTag`是`PLACEMENT`, 与之前一样，将DOM添加添加到父节点上
+
+```js
+function commitWork(fiber) {
+  if (!fiber) {
+    return
+  }
+  const domParent = fiber.parent.dom
+  // 对于新增节点的处理
+  if (
+    fiber.effectTag === "PLACEMENT" &&
+    fiber.dom != null
+  ) {
+    domParent.appendChild(fiber.dom)
+  }
+  // 递归处理子节点
+  commitWork(fiber.child)
+  commitWork(fiber.sibling)
+}
+```
+
+如果`effectTag`是`DELETION`, 我们从父节点上删除节点
+
+```js
+function commitWork(fiber) {
+  if (!fiber) {
+    return
+  }
+  const domParent = fiber.parent.dom
+  if (
+    fiber.effectTag === "PLACEMENT" &&
+    fiber.dom != null
+  ) {
+    // 对于新增节点的处理
+    domParent.appendChild(fiber.dom)
+  } else if (fiber.effectTag === "DELETION") {
+    // 对于删除节点的处理
+    domParent.removeChild(fiber.dom)
+  }
+  // 递归处理子节点
+  commitWork(fiber.child)
+  commitWork(fiber.sibling)
+}
+```
+
+如果`effectTag`是`UPDATE`, 我们使用新的`props`更新现在的DOM
+
+```js
+function commitWork(fiber) {
+  if (!fiber) {
+    return
+  }
+  const domParent = fiber.parent.dom
+  if (
+    fiber.effectTag === "PLACEMENT" &&
+    fiber.dom != null
+  ) {
+    // 对于新增节点的处理
+    domParent.appendChild(fiber.dom)
+  } else if (fiber.effectTag === "DELETION") {
+    // 对于删除节点的处理
+    domParent.removeChild(fiber.dom)
+  } else if (
+    fiber.effectTag === "UPDATE" &&
+    fiber.dom != null
+  ) {
+    // 对于需要更新节点的处理
+    updateDom(
+      fiber.dom,
+      fiber.alternate.props,
+      fiber.props
+    )
+  }
+  // 递归处理子节点
+  commitWork(fiber.child)
+  commitWork(fiber.sibling)
+}
+```
+
+接下来需要实现`updateDom`函数
+
+```js
+function updateDom(dom, prevProps, nextProps) {
+  // TODO
+}
+```
 ## 七: Function 组件
 
 ## 八: hooks

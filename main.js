@@ -45,19 +45,40 @@ function createDom(fiber) {
 let nextUnitOfWork = null
 let wipRoot = null
 let currentRoot = null
+let deletions = null
 
 function commitWork(fiber) {
   if (!fiber) {
     return
   }
   const domParent = fiber.parent.dom
-  domParent.appendChild(fiber.dom)
-  // 递归子节点
+  if (
+    fiber.effectTag === "PLACEMENT" &&
+    fiber.dom != null
+  ) {
+    // 对于新增节点的处理
+    domParent.appendChild(fiber.dom)
+  } else if (fiber.effectTag === "DELETION") {
+    // 对于删除节点的处理
+    domParent.removeChild(fiber.dom)
+  } else if (
+    fiber.effectTag === "UPDATE" &&
+    fiber.dom != null
+  ) {
+    // 对于需要更新节点的处理
+    updateDom(
+      fiber.dom,
+      fiber.alternate.props,
+      fiber.props
+    )
+  }
+  // 递归处理子节点
   commitWork(fiber.child)
   commitWork(fiber.sibling)
 }
 
 function commitRoot() {
+  deletions.forEach(commitWork)
   commitWork(wipRoot.child)
   // 保存最近一次输出到页面上的Fiber树
   currentRoot = wipRoot
@@ -65,7 +86,7 @@ function commitRoot() {
 }
 
 /**
- * 子协调
+ * 子协调, 并构建新的Fiber节点，新的Fiber节点的alternate字段引用旧的Fiber节点
  */
 function reconcileChildren(wipFiber, elements) {
   let index = 0
@@ -87,6 +108,7 @@ function reconcileChildren(wipFiber, elements) {
       element.type == oldFiber.type
 
     if (sameType) {
+      // 对于更新节点
       newFiber = {
         type: oldFiber.type,
         props: element.props,
@@ -98,7 +120,7 @@ function reconcileChildren(wipFiber, elements) {
     }
 
     if (!sameType && element) {
-      // 新增节点
+      // 处理新增节点
       newFiber = {
         type: element.type,
         props: element.props,
@@ -110,7 +132,7 @@ function reconcileChildren(wipFiber, elements) {
     }
 
     if (!sameType && oldFiber) {
-      // 删除节点
+      // 处理删除节点
       oldFiber.effectTag = "DELETION"
       deletions.push(oldFiber)
     }
@@ -142,7 +164,8 @@ function performUnitOfWork(fiber) {
   // 子协调
   reconcileChildren(wipFiber, elements)
 
-  // 接下来返回下一个需要处理的Fiber节点
+  // 接下来返回下一个需要处理的Fiber节点，因为是深度优先遍历
+  // 优先从子节点开始
   if (fiber.child) {
     return fiber.child
   }
@@ -177,7 +200,6 @@ function workLoop(deadline) {
 
 requestIdleCallback(workLoop)
 
-
 function render(element, container) {
   wipRoot = {
     dom: container,
@@ -186,5 +208,6 @@ function render(element, container) {
     },
     alternate: currentRoot,
   }
+  deletions = []
   nextUnitOfWork = wipRoot
 }
