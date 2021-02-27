@@ -157,7 +157,6 @@ function commitWork(fiber) {
   commitWork(fiber.sibling)
 }
 
-
 /**
  * 子协调, 并构建新的Fiber节点，新的Fiber节点的alternate字段引用旧的Fiber节点
  */
@@ -229,19 +228,38 @@ function reconcileChildren(wipFiber, elements) {
 }
 
 /**
- * 处理工作单元（render阶段）
+ * 处理type为DOM的Fiber
  */
-function performUnitOfWork(fiber) {
+function updateHostComponent () {
   if (!fiber.dom) {
     // 创建dom节点
     fiber.dom = createDom(fiber)
   }
-​
-  // 子元素
+​ // 子元素
   const elements = fiber.props.children
   // 子元素与旧的Fiber进行子协调
   reconcileChildren(wipFiber, elements)
+}
 
+/**
+ * 处理type为函数的Fiber
+ */
+function updateFunctionComponent () {
+}
+
+/**
+ * 处理工作单元（render阶段）
+ */
+function performUnitOfWork(fiber) {
+  // 判断是不是函数组件
+  const isFunctionComponent =
+    fiber.type instanceof Function
+
+  if (isFunctionComponent) {
+    updateFunctionComponent(fiber)
+  } else {
+    updateHostComponent(fiber)
+  }
   // 接下来返回下一个需要处理的Fiber节点，因为是深度优先遍历，优先从子节点开始
   if (fiber.child) {
     return fiber.child

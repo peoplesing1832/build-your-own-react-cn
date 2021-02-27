@@ -1081,7 +1081,81 @@ function updateDom(dom, prevProps, nextProps) {
 ```
 ## 七: Function 组件
 
-我们需要添加的下一件事是对Function组件的支持
+我们需要添加的下一件事是对Function组件的支持。我们修改下我们的例子。
+
+```js
+function App(props) {
+  return <h1>Hi {props.name}</h1>
+}
+const element = <App name="foo" />
+const container = document.getElementById("root")
+render(element, container)
+```
+
+我们将jsx转换为js
+
+```js
+function App(props) {
+  return createElement(
+    "h1",
+    null,
+    "Hi ",
+    props.name
+  )
+}
+const element = createElement(App, {
+  name: "foo",
+})
+```
+
+Function组件和DOM主要有两个不同
+
+1. Function组件的Fiber没有DOM节点
+2. children来自Function, 而不是直接从DOM中直接获取
+
+我们检查Fiber的类型是否为函数，并根据类型由不同的函数进行处理，如果是不同的DOM，传入`updateHostComponent`
+
+```js
+function performUnitOfWork(fiber) {
+  // 判断是不是函数组件
+  const isFunctionComponent =
+    fiber.type instanceof Function
+
+  if (isFunctionComponent) {
+    updateFunctionComponent(fiber)
+  } else {
+    updateHostComponent(fiber)
+  }
+  // 接下来返回下一个需要处理的Fiber节点，因为是深度优先遍历，优先从子节点开始
+  if (fiber.child) {
+    return fiber.child
+  }
+  let nextFiber = fiber
+  while (nextFiber) {
+    if (nextFiber.sibling) {
+      return nextFiber.sibling
+    }
+    nextFiber = nextFiber.parent
+  }
+}
+```
+
+`updateHostComponent`和我们之前做的一样
+
+```js
+function updateHostComponent () {
+  if (!fiber.dom) {
+    // 创建dom节点
+    fiber.dom = createDom(fiber)
+  }
+​ // 子元素
+  const elements = fiber.props.children
+  // 子元素与旧的Fiber进行子协调
+  reconcileChildren(wipFiber, elements)
+}
+```
+
+`updateFunctionComponent`运行函数组件获取`children`
 
 ## 八: hooks
 
