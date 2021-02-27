@@ -552,7 +552,7 @@ function workLoop(deadline) {
 
 因此在`commit`我们需要保存最后的Fiber树的引用，我们称之为`currentRoot`。我们还将`alternate`字段添加到每一个Fiber节点上，`alternate`字段上保存了`currentRoot`的引用。
 
-> 🤓️: 在React源码中，在第一次渲染完成后，React会生成一个Fiber树。该树映射了应用程序的状态，这颗树被称为current tree。当应用程序开始更新时，React会构建一个`workInProgress tree`, `workInProgress tree`映射了未来的状态。
+> 🤓️: 在React源码中，在第一次渲染完成后，React会生成一个Fiber树。该树映射了应用程序的状态，这颗树被称为`current tree`。当应用程序开始更新时，React会构建一个`workInProgress tree`, `workInProgress tree`映射了未来的状态。
 
 > 🤓️: 所有的工作都是在`workInProgress tree`上的Fiber上进行的。当React开始遍历Fiber时，它会为每一个现有的Fiber节点创建一个备份, 在`alternate`字段中，备份构成了`workInProgress tree`。
 
@@ -869,6 +869,8 @@ function reconcileChildren(wipFiber, elements) {
 
 > 🤓️: 在React的源码，`workInProgress tree`的Fiber节点拥有`current tree`对应节点的引用。反之亦然。
 
+> 🤓️: 在React的源码中，会把所有需要在`commit`阶段，执行副作用的Fiber节点，构建为线性列表，以方便快速迭代。迭代线性列表要比迭代树快的多，因为不需要迭代没有side-effects的节点。
+
 ```js
 let deletions = null
 
@@ -1078,6 +1080,8 @@ function updateDom(dom, prevProps, nextProps) {
 }
 ```
 ## 七: Function 组件
+
+我们需要添加的下一件事是对Function组件的支持
 
 ## 八: hooks
 

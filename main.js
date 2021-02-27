@@ -1,5 +1,23 @@
+// 判断props是否是on开头
+const isEvent = key => key.startsWith("on")
+// 用于排除children属性，和on开头的属性
+const isProperty = key => key !== "children" && !isEvent(key)
+// 用于判断是否更新了属性
+const isNew = (prev, next) => key => prev[key] !== next[key]
+// 用于判断在新的props上是否有属性
+const isGone = (prev, next) => key => !(key in next)
+
+// 下一个需要工作的Fiber节点的引用
+let nextUnitOfWork = null
+// Fiber根节点的引用， workInProgress tree的根节点，current tree的根节点在其alternate属性上
+let wipRoot = null
+// 当前页面的Fiber的树（类似与current tree）
+let currentRoot = null
+// 需要删除的节点数组
+let deletions = null
+
 /**
- * 创建文本节点的虚拟DOM
+ * 创建文本节点虚拟DOM
  */
 function createTextElement(text) {
   return {
@@ -19,20 +37,18 @@ function createElement(type, props, ...children) {
     type,
     props: {
       ...props,
-      children,
+      children: children.map(child =>
+        typeof child === "object"
+          ? child
+          : createTextElement(child)
+      ),
     },
   }
 }
 
-// 判断props是否是on开头
-const isEvent = key => key.startsWith("on")
-// 用于排除children属性，和on开头的属性
-const isProperty = key => key !== "children" && !isEvent(key)
-// 用于判断是否更新了属性
-const isNew = (prev, next) => key => prev[key] !== next[key]
-// 用于判断在新的props上是否有属性
-const isGone = (prev, next) => key => !(key in next)
-
+/**
+ * 更新DOM
+ */
 function updateDom(dom, prevProps, nextProps) {
   Object.keys(prevProps)
     .filter(isEvent)
@@ -99,31 +115,36 @@ function createDom(fiber) {
   return dom
 }
 
-let nextUnitOfWork = null
-let wipRoot = null
-let currentRoot = null
-let deletions = null
+/**
+ * 开始处理commit阶段
+ */
+function commitRoot() {
+  // 开始处理工作,先处理删除节点的任务
+  deletions.forEach(commitWork)
+  // 开始处理工作,处理更新和添加的工作
+  commitWork(wipRoot.child)
+  // 将新的Fiber设置为老的Fiber树
+  currentRoot = wipRoot
+  wipRoot = null
+}
 
-
+/**
+ * commit阶段的工作
+ */
 function commitWork(fiber) {
   if (!fiber) {
     return
   }
+  // 父级dom
   const domParent = fiber.parent.dom
-  if (
-    fiber.effectTag === "PLACEMENT" &&
-    fiber.dom != null
-  ) {
-    // 对于新增节点的处理
+  if (fiber.effectTag === "PLACEMENT" && fiber.dom != null) {
+    // 处理新增
     domParent.appendChild(fiber.dom)
   } else if (fiber.effectTag === "DELETION") {
-    // 对于删除节点的处理
+    // 处理删除
     domParent.removeChild(fiber.dom)
-  } else if (
-    fiber.effectTag === "UPDATE" &&
-    fiber.dom != null
-  ) {
-    // 对于需要更新节点的处理
+  } else if (fiber.effectTag === "UPDATE" && fiber.dom != null) {
+    // 处理更新
     updateDom(
       fiber.dom,
       fiber.alternate.props,
@@ -132,16 +153,10 @@ function commitWork(fiber) {
   }
   // 递归处理子节点
   commitWork(fiber.child)
+  // 递归处理兄弟节点
   commitWork(fiber.sibling)
 }
 
-function commitRoot() {
-  deletions.forEach(commitWork)
-  commitWork(wipRoot.child)
-  // 保存最近一次输出到页面上的Fiber树
-  currentRoot = wipRoot
-  wipRoot = null
-}
 
 /**
  * 子协调, 并构建新的Fiber节点，新的Fiber节点的alternate字段引用旧的Fiber节点
@@ -213,17 +228,21 @@ function reconcileChildren(wipFiber, elements) {
   }
 }
 
+/**
+ * 处理工作单元（render阶段）
+ */
 function performUnitOfWork(fiber) {
   if (!fiber.dom) {
+    // 创建dom节点
     fiber.dom = createDom(fiber)
   }
 ​
+  // 子元素
   const elements = fiber.props.children
-  // 子协调
+  // 子元素与旧的Fiber进行子协调
   reconcileChildren(wipFiber, elements)
 
-  // 接下来返回下一个需要处理的Fiber节点，因为是深度优先遍历
-  // 优先从子节点开始
+  // 接下来返回下一个需要处理的Fiber节点，因为是深度优先遍历，优先从子节点开始
   if (fiber.child) {
     return fiber.child
   }
@@ -249,7 +268,7 @@ function workLoop(deadline) {
   }
   // 如果nextUnitOfWork为假, 说明所有的工作都已经做完了, 我们需要进入commit阶段
   if (!nextUnitOfWork && wipRoot) {
-    // 添加dom
+    // 开始进入commit阶段，commit阶段不是异步的，所以不会判断timeRemaining
     commitRoot()
   }
 
