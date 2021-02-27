@@ -1025,6 +1025,44 @@ const isProperty = key => key !== "children" && !isEvent(key)
 如果事件处理程序发生了更改，我们需要首先删除，然后添加新的处理程序
 
 > 🤓️: 直接在DOM上添加事件处理程序的方式，有点类似`preact`中的处理方式
+
+```js
+function updateDom(dom, prevProps, nextProps) {
+  Object.keys(prevProps)
+    .filter(isEvent)
+    .filter(
+      key =>
+        // 如果事件处理程序发生了更新，获取新的props上没有
+        // 需要先删除之前的处理程序
+        !(key in nextProps) ||
+        isNew(prevProps, nextProps)(key)
+    )
+    .forEach(name => {
+      const eventType = name
+        .toLowerCase()
+        .substring(2)
+      dom.removeEventListener(
+        eventType,
+        prevProps[name]
+      )
+    })
+
+  // 删除之前的属性
+  Object.keys(prevProps)
+    .filter(isProperty)
+    .filter(isGone(prevProps, nextProps))
+    .forEach(name => {
+      dom[name] = ""
+    })
+  // 添加或者更新属性
+  Object.keys(nextProps)
+    .filter(isProperty)
+    .filter(isNew(prevProps, nextProps))
+    .forEach(name => {
+      dom[name] = nextProps[name]
+    })
+}
+```
 ## 七: Function 组件
 
 ## 八: hooks
