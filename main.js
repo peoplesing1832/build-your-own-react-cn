@@ -254,7 +254,7 @@ function updateHostComponent (fiber) {
     // 创建dom节点
     fiber.dom = createDom(fiber)
   }
-​  // 子元素
+  // 子元素
   const elements = fiber.props.children
   reconcileChildren(wipFiber, elements)
 }
@@ -262,7 +262,7 @@ function updateHostComponent (fiber) {
 /**
  * 处理type为函数的Fiber
  */
-function updateFunctionComponent () {
+function updateFunctionComponent (fiber) {
   // 设置正在工作的Fiber
   wipFiber = fiber
   // 当前hooks的索引默认为0
