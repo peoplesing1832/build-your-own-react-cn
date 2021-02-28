@@ -22,5 +22,21 @@
   "homepage": "https://github.com/peoplesing1832/build-your-own-react#readme",
   "dependencies": {
     "@babel/runtime": "^7.13.8"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.13.8",
+    "@babel/plugin-proposal-class-properties": "^7.13.0",
+    "@babel/plugin-proposal-export-default-from": "^7.12.13",
+    "@babel/plugin-proposal-export-namespace-from": "^7.12.13",
+    "@babel/plugin-proposal-optional-chaining": "^7.13.8",
+    "@babel/plugin-transform-runtime": "^7.13.8",
+    "@babel/preset-env": "^7.13.8",
+    "@babel/preset-react": "^7.12.13",
+    "babel-loader": "^8.2.2",
+    "cross-env": "^7.0.3",
+    "html-webpack-plugin": "^4.3.0",
+    "webpack": "4.46.0",
+    "webpack-cli": "^3.3.11",
+    "webpack-dev-server": "^3.10.3"
   }
 }

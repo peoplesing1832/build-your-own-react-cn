@@ -1,5 +1,6 @@
 const { resolve } = require('path')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
+const webpack = require('webpack')
 
 module.exports = {
   target: 'web',
@@ -10,10 +11,6 @@ module.exports = {
 
   resolve: {
     extensions: ['.js', '.jsx'],
-
-    alias: {
-      '@': resolve(__dirname, '../src'),
-    },
   },
 
   devServer: {
@@ -37,8 +34,8 @@ module.exports = {
   plugins: [
     new webpack.HotModuleReplacementPlugin(),
     new HtmlWebpackPlugin({
-      filename: resolve(__dirname, './../dist/index.html'),
-      template: resolve(__dirname, './../public/index.html')
+      filename: resolve(__dirname, './dist/index.html'),
+      template: resolve(__dirname, './index.html')
     })
   ]
 }

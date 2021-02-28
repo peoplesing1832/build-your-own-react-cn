@@ -37,7 +37,7 @@ function createTextElement(text) {
 /**
  * 创建虚拟DOM
  */
-function createElement(type, props, ...children) {
+export function createElement(type, props, ...children) {
   return {
     type,
     props: {

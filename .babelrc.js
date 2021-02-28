@@ -12,7 +12,8 @@ module.exports = function (api) {
       [
         "@babel/preset-react",
         {
-          development: isDevelopment
+          development: isDevelopment,
+          pragma: 'createElement'
         }
       ]
     ],
