@@ -235,11 +235,12 @@ function reconcileChildren(wipFiber, elements) {
     if (index === 0) {
       // 父Fiber节点添加child字段，child指向了第一个子节点
       wipFiber.child = newFiber
+      wipFiber.child = newFiber
     } else if (element) {
       // 同级的Fiber节点添加sibling字段
       prevSibling.sibling = newFiber
     }
-​
+
     prevSibling = newFiber
     index++
   }
@@ -248,14 +249,13 @@ function reconcileChildren(wipFiber, elements) {
 /**
  * 处理type为DOM的Fiber
  */
-function updateHostComponent () {
+function updateHostComponent (fiber) {
   if (!fiber.dom) {
     // 创建dom节点
     fiber.dom = createDom(fiber)
   }
-​ // 子元素
+​  // 子元素
   const elements = fiber.props.children
-  // 子元素与旧的Fiber进行子协调
   reconcileChildren(wipFiber, elements)
 }
 
