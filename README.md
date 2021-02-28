@@ -1216,12 +1216,50 @@ function commitWork(fiber) {
       fiber.props
     )
   }
-  // ..
+  // ...
 }
 ```
 
 ## 八: hooks
 
+最后一步。目前我们有了Function组件，现在让我们添加状态。下面是一个计数器的例子
+
+```js
+function Counter() {
+  const [state, setState] = Didact.useState(1)
+  return (
+    <h1 onClick={() => setState(c => c + 1)}>
+      Count: {state}
+    </h1>
+  )
+}
+const element = <Counter />
+onst container = document.getElementById("root")
+render(element, container)
+```
+
+我们使用`useState`获取和更新计数器的值。在调用函数组件前，我们需要初始化一些全局变量，以便在`useState`函数中使用它们。
+
+首先获取正在工作的Fiber，我们在Fiber节点中添加`hooks`数组，使用数组的目的是为了支持多个`useState`。并且引用当前`hooks`的索引。
+
+```js
+// 当前正在工作的Fiber
+let wipFiber = null
+// 当前Fiber的hooks的索引
+let hookIndex = null
+
+function updateFunctionComponent () {
+  // 设置正在工作的Fiber
+  wipFiber = fiber
+  // 当前hooks的索引默认为0
+  hookIndex = 0
+  // hooks的集合
+  wipFiber.hooks = []
+  // 获取Function组件的children
+  const children = [fiber.type(fiber.props)]
+  reconcileChildren(fiber, children)
+}
+```
 ## 参考
 
 - [Build your own React(基于hooks实现)](https://pomb.us/build-your-own-react/)

@@ -16,6 +16,11 @@ let currentRoot = null
 // 需要删除的节点数组
 let deletions = null
 
+// 当前正在工作的Fiber
+let wipFiber = null
+// 当前Fiber的hooks的索引
+let hookIndex = null
+
 /**
  * 创建文本节点虚拟DOM
  */
@@ -258,6 +263,12 @@ function updateHostComponent () {
  * 处理type为函数的Fiber
  */
 function updateFunctionComponent () {
+  // 设置正在工作的Fiber
+  wipFiber = fiber
+  // 当前hooks的索引默认为0
+  hookIndex = 0
+  // hooks的集合
+  wipFiber.hooks = []
   // 获取Function组件的children
   const children = [fiber.type(fiber.props)]
   reconcileChildren(fiber, children)
@@ -287,6 +298,10 @@ function performUnitOfWork(fiber) {
     }
     nextFiber = nextFiber.parent
   }
+}
+
+function useState(initial) {
+  // TODO
 }
 
 /**
