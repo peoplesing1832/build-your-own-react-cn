@@ -108,7 +108,7 @@ function updateDom(dom, prevProps, nextProps) {
 function createDom(fiber) {
   const dom = fiber.type == "TEXT_ELEMENT"
     ? document.createTextNode("")
-    : document.createElement(element.type)
+    : document.createElement(fiber.type)
 
   // 为创建的DOM, 添加属性
   updateDom(dom, {}, fiber.props)
@@ -256,7 +256,7 @@ function updateHostComponent (fiber) {
   }
   // 子元素
   const elements = fiber.props.children
-  reconcileChildren(wipFiber, elements)
+  reconcileChildren(fiber, elements)
 }
 
 /**
