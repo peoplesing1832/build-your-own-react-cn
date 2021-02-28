@@ -310,6 +310,10 @@ function useState(initial) {
     state: oldHook ? oldHook.state : initial,
     queue: [], // 更新队列
   }
+  const actions = oldHook ? oldHook.queue : []
+  actions.forEach(action => {
+    hook.state = action(hook.state)
+  })
   const setState = (action) => {
     // action添加到队列中
     hook.queue.push(action)

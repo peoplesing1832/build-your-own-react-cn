@@ -5,6 +5,7 @@
 Build your own React 的学习笔记
 
 ## demo
+
 ## 前言
 
 重写React, 遵循React代码中的架构, 但是没有进行优化。基于React16.8, 使用hook并删除了所有与类相关的代码。
@@ -1316,7 +1317,66 @@ function useState(initial) {
 }
 ```
 
-但是目前我们还没有更新`state`。
+> 🤓️: 这里简化了setState, setState只接收函数作为参数。
+
+但是目前我们还没有更新`state`。在下次渲染组件时，我们从旧的队列中获取所有`action`。然后将它们逐一应用到新的hook state上。当我们返回状态时，state会被更新。
+
+> 🤓️: 调用setState，不会立刻更新state。而是在进入`render`阶段后更新state，然后`useState`会返回新的状态。
+
+```js
+function useState(initial) {
+  const oldHook =
+    wipFiber.alternate &&
+    wipFiber.alternate.hooks &&
+    wipFiber.alternate.hooks[hookIndex]
+  // 判断之前是否有状态
+  const hook = {
+    state: oldHook ? oldHook.state : initial,
+    queue: [], // 更新队列
+  }
+  const actions = oldHook ? oldHook.queue : []
+  actions.forEach(action => {
+    hook.state = action(hook.state)
+  })
+  const setState = (action) => {
+    // action添加到队列中
+    hook.queue.push(action)
+    wipRoot = {
+      dom: currentRoot.dom,
+      props: currentRoot.props,
+      alternate: currentRoot,
+    }
+    // 当nextUnitOfWork不为空时，就会进入渲染阶段
+    nextUnitOfWork = wipRoot
+    deletions = []
+  }
+  wipFiber.hooks.push(hook)
+  hookIndex++
+  return [hook.state, setState]
+}
+```
+
+我们已经建立了好了自己的React。
+
+## 结语
+
+除了帮助你理解react是工作原理外，本文的另一个目的是让你在后续能够更轻松深入React。所以我们多次使用了和react源码中一样的函数名以及变量名。
+
+我们省略了很多了React的优化
+
+- 在`render`阶段遍历整棵树，但是React中会跳过没有任何更改的子树。
+- `commit`阶段，React会进行线性遍历
+- 目前我们会每次都创建一个新的Fiber，而React中会复用之前的Fiber节点
+
+还有很多...
+
+我们还可以继续添加功能，比如：
+
+1. 添加key
+2. 添加useEffect
+3. 使用对象作为样式的props
+4. children扁平化
+
 ## 参考
 
 - [Build your own React(基于hooks实现)](https://pomb.us/build-your-own-react/)
