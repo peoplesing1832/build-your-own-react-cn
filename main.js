@@ -105,14 +105,20 @@ function createDom(fiber) {
     ? document.createTextNode("")
     : document.createElement(element.type)
 
-  const isProperty = key => key !== "children"
-
-  Object.keys(element.props)
-    .filter(isProperty)
-    .forEach(name => {
-      dom[name] = element.props[name]
-    })
+  // 为创建的DOM, 添加属性
+  updateDom(dom, {}, fiber.props)
   return dom
+}
+
+/**
+ * 删除节点
+ */
+function commitDeletion (fiber, domParent) {
+  if (fiber.dom) {
+    domParent.removeChild(fiber.dom)
+  } else {
+    commitDeletion(fiber.child, domParent)
+  }
 }
 
 /**
@@ -135,14 +141,21 @@ function commitWork(fiber) {
   if (!fiber) {
     return
   }
-  // 父级dom
-  const domParent = fiber.parent.dom
+  // 父级Fiber
+  let domParentFiber = fiber.parent
+  // 直到找到含有dom的Fiber节点
+  while (!domParentFiber.dom) {
+    domParentFiber = domParentFiber.parent
+  }
+  const domParent = domParentFiber.dom
+
+
   if (fiber.effectTag === "PLACEMENT" && fiber.dom != null) {
     // 处理新增
     domParent.appendChild(fiber.dom)
   } else if (fiber.effectTag === "DELETION") {
     // 处理删除
-    domParent.removeChild(fiber.dom)
+    commitDeletion(fiber, domParent)
   } else if (fiber.effectTag === "UPDATE" && fiber.dom != null) {
     // 处理更新
     updateDom(
@@ -245,6 +258,9 @@ function updateHostComponent () {
  * 处理type为函数的Fiber
  */
 function updateFunctionComponent () {
+  // 获取Function组件的children
+  const children = [fiber.type(fiber.props)]
+  reconcileChildren(fiber, children)
 }
 
 /**

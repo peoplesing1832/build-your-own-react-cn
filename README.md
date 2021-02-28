@@ -1155,7 +1155,70 @@ function updateHostComponent () {
 }
 ```
 
-`updateFunctionComponent`运行函数组件获取`children`
+`updateFunctionComponent`运行函数组件获取`children`。在我们的例子中App会返回h1元素。一旦有了`children`, 协调就可以按照之前的方式进行了。不需要进行任何修改。
+
+```js
+function updateFunctionComponent () {
+  // 获取Function组件的children
+  const children = [fiber.type(fiber.props)]
+  reconcileChildren(fiber, children)
+}
+```
+
+下面我们需要修改`commitWork`函数。因为我们的Function组件的Fiber节点没有DOM节点。我们需要修改两件事。
+
+
+首先如果要找到DOM节点的父节点，我们需要依次向上查找，找到带有DOM节点的Fiber
+
+```js
+
+function commitWork(fiber) {
+  if (!fiber) {
+    return
+  }
+  // 父级Fiber
+  let domParentFiber = fiber.parent
+  // 直到找到含有dom的Fiber节点
+  while (!domParentFiber.dom) {
+    domParentFiber = domParentFiber.parent
+  }
+  const domParent = domParentFiber.dom
+
+  // ...
+}
+```
+
+在删除节点时，我们需要向下直到找到含有DOM节点的Fiber
+
+```js
+function commitDeletion (fiber, domParent) {
+  if (fiber.dom) {
+    domParent.removeChild(fiber.dom)
+  } else {
+    commitDeletion(fiber.child, domParent)
+  }
+}
+
+function commitWork(fiber) {
+  // ...
+
+  if (fiber.effectTag === "PLACEMENT" && fiber.dom != null) {
+    // 处理新增
+    domParent.appendChild(fiber.dom)
+  } else if (fiber.effectTag === "DELETION") {
+    // 处理删除
+    commitDeletion(fiber, domParent)
+  } else if (fiber.effectTag === "UPDATE" && fiber.dom != null) {
+    // 处理更新
+    updateDom(
+      fiber.dom,
+      fiber.alternate.props,
+      fiber.props
+    )
+  }
+  // ..
+}
+```
 
 ## 八: hooks
 
