@@ -9,7 +9,7 @@ const isGone = (prev, next) => key => !(key in next)
 
 // 下一个需要工作的Fiber节点的引用
 let nextUnitOfWork = null
-// Fiber根节点的引用， workInProgress tree的根节点，current tree的根节点在其alternate属性上
+// 正在工作的Fiber树，（类似，workInProgress tree，current tree的根节点在其alternate属性上
 let wipRoot = null
 // 当前页面的Fiber的树（类似与current tree）
 let currentRoot = null
@@ -301,7 +301,30 @@ function performUnitOfWork(fiber) {
 }
 
 function useState(initial) {
-  // TODO
+  const oldHook =
+    wipFiber.alternate &&
+    wipFiber.alternate.hooks &&
+    wipFiber.alternate.hooks[hookIndex]
+  // 判断之前是否有状态
+  const hook = {
+    state: oldHook ? oldHook.state : initial,
+    queue: [], // 更新队列
+  }
+  const setState = (action) => {
+    // action添加到队列中
+    hook.queue.push(action)
+    wipRoot = {
+      dom: currentRoot.dom,
+      props: currentRoot.props,
+      alternate: currentRoot,
+    }
+    // 当nextUnitOfWork不为空时，就会进入渲染阶段
+    nextUnitOfWork = wipRoot
+    deletions = []
+  }
+  wipFiber.hooks.push(hook)
+  hookIndex++
+  return [hook.state, setState]
 }
 
 /**

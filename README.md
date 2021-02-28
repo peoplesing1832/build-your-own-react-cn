@@ -491,9 +491,11 @@ function performUnitOfWork(nextUnitOfWork) {
   // ...
 ```
 
-我们需要保留Fiber树根的引用, 我们称其为`wipRoot`
+我们需要保留Fiber树根的引用, 我们称其为正在工作的root或`wipRoot`。
 
 > 🤓️: 在React中Fiber树的根被称为`HostRoot`。我们可以在通过容器的DOM节点获取, `容器DOM._reactRootContainer._internalRoot.current`。
+
+> 🤓️: `wipRoot`类似React源码中`workInProgress tree`的根节点，在React应用程序中，我们可以通过`容器DOM._reactRootContainer._internalRoot.current.alternate`, 获取`workInProgress tree`的根节点。
 
 ```js
 let wipRoot = null
@@ -1249,7 +1251,7 @@ let wipFiber = null
 let hookIndex = null
 
 function updateFunctionComponent () {
-  // 设置正在工作的Fiber
+  // 正在工作的Fiber
   wipFiber = fiber
   // 当前hooks的索引默认为0
   hookIndex = 0
@@ -1260,6 +1262,61 @@ function updateFunctionComponent () {
   reconcileChildren(fiber, children)
 }
 ```
+
+当组件调用`useState`时，首先我们检查是否之前是否有hook，如果存在旧的hook把之前的状态复制到新hook。否则，使用初始值初始化hook。
+
+然后将hook添加到Fiber，并将hook的索引加1
+
+```js
+function useState(initial) {
+  const oldHook =
+    wipFiber.alternate &&
+    wipFiber.alternate.hooks &&
+    wipFiber.alternate.hooks[hookIndex]
+  // 判断之前是否有状态
+  const hook = {
+    state: oldHook ? oldHook.state : initial,
+  }
+  wipFiber.hooks.push(hook)
+  hookIndex++
+  return [hook.state]
+}
+```
+
+`useState`还应该返回一个函数，更新状态。因此我们定义`setState`用于接收`action`, 用于更新状态。`setState`会将`action`推入到`hook`的队列上。
+
+然后我们执行与`render`函数中类似的操作，我们设置`nextUnitOfWork`开始进行新的渲染阶段。
+
+```js
+function useState(initial) {
+  const oldHook =
+    wipFiber.alternate &&
+    wipFiber.alternate.hooks &&
+    wipFiber.alternate.hooks[hookIndex]
+  // 判断之前是否有状态
+  const hook = {
+    state: oldHook ? oldHook.state : initial,
+    queue: [], // 更新队列
+  }
+  const setState = (action) => {
+    // action添加到队列中
+    hook.queue.push(action)
+    wipRoot = {
+      dom: currentRoot.dom,
+      props: currentRoot.props,
+      alternate: currentRoot,
+    }
+    // 当nextUnitOfWork不为空时，就会进入渲染阶段
+    nextUnitOfWork = wipRoot
+    deletions = []
+  }
+  wipFiber.hooks.push(hook)
+  hookIndex++
+  return [hook.state, setState]
+}
+```
+
+但是目前我们还没有更新`state`。
 ## 参考
 
 - [Build your own React(基于hooks实现)](https://pomb.us/build-your-own-react/)
