@@ -300,7 +300,7 @@ function performUnitOfWork(fiber) {
   }
 }
 
-function useState(initial) {
+export function useState(initial) {
   const oldHook =
     wipFiber.alternate &&
     wipFiber.alternate.hooks &&
@@ -351,9 +351,7 @@ function workLoop(deadline) {
   requestIdleCallback(workLoop)
 }
 
-requestIdleCallback(workLoop)
-
-function render(element, container) {
+export function render(element, container) {
   wipRoot = {
     dom: container,
     props: {
@@ -364,3 +362,5 @@ function render(element, container) {
   deletions = []
   nextUnitOfWork = wipRoot
 }
+
+requestIdleCallback(workLoop)

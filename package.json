@@ -4,7 +4,8 @@
   "description": "Build your own React 学习笔记",
   "main": "main.js",
   "scripts": {
-    "dev": ""
+    "dev": "cross-env NODE_ENV=development webpack-dev-server --config ./webpack.config.js --color --open",
+    "start": "npm run dev"
   },
   "repository": {
     "type": "git",
@@ -18,5 +19,8 @@
   "bugs": {
     "url": "https://github.com/peoplesing1832/build-your-own-react/issues"
   },
-  "homepage": "https://github.com/peoplesing1832/build-your-own-react#readme"
+  "homepage": "https://github.com/peoplesing1832/build-your-own-react#readme",
+  "dependencies": {
+    "@babel/runtime": "^7.13.8"
+  }
 }
