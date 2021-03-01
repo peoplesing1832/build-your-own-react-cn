@@ -4,7 +4,13 @@
 
 Build your own React 的学习笔记
 
-## demo
+## 预览
+
+```js
+yarn install
+
+npm start
+```
 
 ## 前言
 
