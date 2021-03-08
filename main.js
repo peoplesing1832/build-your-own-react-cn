@@ -161,6 +161,8 @@ function commitWork(fiber) {
   } else if (fiber.effectTag === "DELETION") {
     // 处理删除
     commitDeletion(fiber, domParent)
+    // 由于删除了父级的DOM, 再删除子级的DOM, 会报错
+    return
   } else if (fiber.effectTag === "UPDATE" && fiber.dom != null) {
     // 处理更新
     updateDom(
