@@ -256,7 +256,7 @@ function updateHostComponent (fiber) {
   }
   // 子元素
   const elements = fiber.props.children
-  reconcileChildren(fiber, elements)
+  reconcileChildren(fiber, elements.flat())
 }
 
 /**
