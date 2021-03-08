@@ -6,9 +6,9 @@ Build your own React 的学习笔记
 
 ## TODO
 
-- [ ]为协调的过程添加key
-- [ ]添加其他的hook
-
+- [ ] 尝试替换requestIdleCallback
+- [ ] 为协调的过程添加key
+- [ ] 添加其他的hook
 
 ## 预览
 
