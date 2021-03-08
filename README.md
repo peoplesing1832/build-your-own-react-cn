@@ -4,6 +4,12 @@
 
 Build your own React 的学习笔记
 
+## TODO
+
+- [ ]为协调的过程添加key
+- [ ]添加其他的hook
+
+
 ## 预览
 
 ```js
@@ -11,7 +17,6 @@ yarn install
 
 npm start
 ```
-
 ## 前言
 
 重写React, 遵循React代码中的架构, 但是没有进行优化。基于React16.8, 使用hook并删除了所有与类相关的代码。
